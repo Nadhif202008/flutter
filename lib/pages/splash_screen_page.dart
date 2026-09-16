@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../providers/app_state.dart';
 import '../theme/app_theme.dart';
 import 'main_navigation_page.dart';
+import 'login_page.dart';
 
 class SplashScreenPage extends StatefulWidget {
   final AppState appState;
@@ -36,13 +37,16 @@ class _SplashScreenPageState extends State<SplashScreenPage> with SingleTickerPr
 
     _controller.forward();
 
-    // Navigate to MainNavigationPage after 2.5 seconds
+    // Navigate after 2.5 seconds depending on login state
     Timer(const Duration(milliseconds: 2500), () {
       if (mounted) {
+        final targetPage = widget.appState.isLoggedIn
+            ? MainNavigationPage(appState: widget.appState)
+            : LoginPage(appState: widget.appState);
+
         Navigator.of(context).pushReplacement(
           PageRouteBuilder(
-            pageBuilder: (context, animation, secondaryAnimation) =>
-                MainNavigationPage(appState: widget.appState),
+            pageBuilder: (context, animation, secondaryAnimation) => targetPage,
             transitionsBuilder: (context, animation, secondaryAnimation, child) {
               return FadeTransition(opacity: animation, child: child);
             },
@@ -52,6 +56,7 @@ class _SplashScreenPageState extends State<SplashScreenPage> with SingleTickerPr
       }
     });
   }
+
 
   @override
   void dispose() {

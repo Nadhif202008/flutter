@@ -124,3 +124,23 @@ class Order {
     required this.paymentMethod,
   });
 }
+
+class UserProfile {
+  final String id;
+  final String name;
+  final String email;
+  final String phone;
+  final String profilePic;
+  final bool isVip;
+
+  UserProfile({
+    required this.id,
+    required this.name,
+    required this.email,
+    required this.phone,
+    this.profilePic = '',
+    this.isVip = true,
+  });
+}
+
+

@@ -8,19 +8,42 @@ class AppState extends ChangeNotifier {
   Restaurant? _currentCartRestaurant;
   final List<Order> _orders = [];
   Order? _activeOrder;
-  
+
   String _selectedCategoryId = 'all';
   String _searchQuery = '';
   String? _appliedVoucherCode;
   double _appliedDiscountAmount = 0.0;
-  
+
   String _deliveryAddress = 'Jl. Jend. Sudirman No. 45, Jakarta Pusat';
-  
+
+  UserProfile? _currentUser;
+  final List<UserProfile> _registeredUsers = [];
+  final Map<String, String> _userPasswords = {};
+
   AppState() {
     _restaurants = MockData.getRestaurants();
+    _seedDefaultUser();
+  }
+
+
+  void _seedDefaultUser() {
+    final demoUser = UserProfile(
+      id: 'USR-001',
+      name: 'Ahmad Nadhif',
+      email: 'nadhif@gmail.com',
+      phone: '081234567890',
+      isVip: true,
+    );
+    _registeredUsers.add(demoUser);
+    _userPasswords['nadhif@gmail.com'] = '123456';
+    _userPasswords['081234567890'] = '123456';
+    // Initially not logged in to show Login screen
+    _currentUser = null;
   }
 
   // Getters
+  UserProfile? get currentUser => _currentUser;
+  bool get isLoggedIn => _currentUser != null;
   List<Restaurant> get restaurants => _restaurants;
   List<CartItem> get cartItems => List.unmodifiable(_cartItems);
   Restaurant? get currentCartRestaurant => _currentCartRestaurant;
@@ -31,6 +54,90 @@ class AppState extends ChangeNotifier {
   String? get appliedVoucherCode => _appliedVoucherCode;
   double get appliedDiscountAmount => _appliedDiscountAmount;
   String get deliveryAddress => _deliveryAddress;
+
+  // Auth Methods
+  String? login(String emailOrPhone, String password) {
+    final cleanInput = emailOrPhone.trim().toLowerCase();
+    final cleanPassword = password.trim();
+
+    if (cleanInput.isEmpty || cleanPassword.isEmpty) {
+      return 'Email/No. HP dan Password wajib diisi';
+    }
+
+    final user = _registeredUsers.firstWhere(
+      (u) => u.email.toLowerCase() == cleanInput || u.phone == cleanInput,
+      orElse: () => UserProfile(id: '', name: '', email: '', phone: ''),
+    );
+
+    if (user.id.isEmpty) {
+      return 'Akun tidak ditemukan. Silakan daftar terlebih dahulu.';
+    }
+
+    final storedPassword = _userPasswords[user.email.toLowerCase()] ?? _userPasswords[user.phone];
+    if (storedPassword != cleanPassword) {
+      return 'Password yang Anda masukkan salah.';
+    }
+
+    _currentUser = user;
+    notifyListeners();
+    return null; // Success
+  }
+
+  String? register({
+    required String name,
+    required String email,
+    required String phone,
+    required String password,
+    bool autoLogin = false,
+  }) {
+    final cleanName = name.trim();
+    final cleanEmail = email.trim().toLowerCase();
+    final cleanPhone = phone.trim();
+    final cleanPassword = password.trim();
+
+    if (cleanName.isEmpty || cleanEmail.isEmpty || cleanPhone.isEmpty || cleanPassword.isEmpty) {
+      return 'Semua bidang data wajib diisi';
+    }
+
+    if (cleanPassword.length < 6) {
+      return 'Password minimal 6 karakter';
+    }
+
+    final exists = _registeredUsers.any(
+      (u) => u.email.toLowerCase() == cleanEmail || u.phone == cleanPhone,
+    );
+    if (exists) {
+      return 'Email atau No. HP sudah terdaftar. Silakan login.';
+    }
+
+    final newUser = UserProfile(
+      id: 'USR-${DateTime.now().millisecondsSinceEpoch.toString().substring(7)}',
+      name: cleanName,
+      email: cleanEmail,
+      phone: cleanPhone,
+      isVip: true,
+    );
+
+    _registeredUsers.add(newUser);
+    _userPasswords[cleanEmail] = cleanPassword;
+    _userPasswords[cleanPhone] = cleanPassword;
+    if (autoLogin) {
+      _currentUser = newUser;
+    }
+    notifyListeners();
+    return null; // Success
+  }
+
+
+  void loginAsDemo() {
+    login('nadhif@gmail.com', '123456');
+  }
+
+  void logout() {
+    _currentUser = null;
+    notifyListeners();
+  }
+
 
   List<Restaurant> get filteredRestaurants {
     return _restaurants.where((r) {
